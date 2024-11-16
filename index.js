@@ -3,10 +3,10 @@ const getTime = require('./util/getTime')
 const printLog = require('./util/printLog')
 
 const cookie = ``
-const usertext = '14327711'
-const searchKeyWord = 'httpcode:403'
-const startLong = new Date('2024-11-16 13:19:00').getTime()
-const endLong = new Date('2024-11-16 13:19:00').getTime()
+const usertext = 'oZP24uBpLXJtkQQMqLQglgYJRU7M'
+const searchKeyWord = 'httpcode:418'
+const startLong = new Date('2024-11-16 16:06:00').getTime()
+const endLong = new Date('2024-11-16 16:06:00').getTime()
 
 const searchLogIdList = []
 const searchResultList = []
@@ -69,7 +69,14 @@ async function fetchLogList(searchKeyWord, limit, offset, startLong, endLong) {
                 fetchLogList(searchKeyWord, limit, offset += limit, startLong, endLong)
             } else {
                 fetchWithLimit(searchLogIdList, 3).then(results => {
-                    printLog.info(`${getTime()}: 查询完所有日志详情, ${JSON.stringify(searchResultList)}`)
+                    printLog.info(`${getTime()}: 查询完所有日志详情 ================>`)
+                    searchResultList.forEach((item, index) => {
+                        printLog.info(`${index}: ${JSON.stringify(item)}`)
+                    })
+                    const detailList = results.filter(i => i)
+                    printLog.info(`${getTime()}: 共查询出：${searchLogIdList.length} 条数据记录`)
+                    printLog.info(`${getTime()}: 共查询出：${detailList.length} 条数据明细`)
+                    printLog.warn(`${getTime()}: 共查询出：${searchResultList.length} 条匹配数据`)
                 })
             }
         }
