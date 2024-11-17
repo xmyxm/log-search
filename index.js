@@ -154,7 +154,7 @@ async function fetchListWithLimit(searchKeyWord, limit, offset, startLong, endLo
 
         executing.push(promise);
 
-        if (executing.length >= maxRequestCount) {
+        if (executing.length > maxRequestCount) {
             await Promise.race(executing);
         }
     }
@@ -173,7 +173,7 @@ async function fetchDetailWithLimit(idList, maxRequestCount) {
 
         executing.push(promise);
 
-        if (executing.length >= maxRequestCount) {
+        if (executing.length > maxRequestCount) {
             await Promise.race(executing);
         }
     }
