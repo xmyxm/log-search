@@ -10,11 +10,12 @@ const endLong = new Date('2024-11-16 16:06:00').getTime()
 
 let offset = 0;
 const limit = 100;
+const maxRequestCount = 3
 const host = ['h', 't', 't', 'p', 's', ':', '/', '/', 'r', 'a', 'p', 't', 'o', 'r', '.', 'm', 'w', 's', '.', 's', 'a', 'n', 'k', 'u', 'a', 'i', '.', 'c', 'o', 'm'].join('')
 
 Promise.resolve().then(() => {
-    fetchListWithLimit(searchKeyWord, limit, offset, startLong, endLong).then((idList) => {
-        fetchDetailWithLimit(idList, 3).then(detailList => {
+    fetchListWithLimit(searchKeyWord, limit, offset, startLong, endLong, maxRequestCount).then((idList) => {
+        fetchDetailWithLimit(idList, maxRequestCount).then(detailList => {
             printLog.info(`${getTime()}: 查询完所有日志详情 ================>`)
             let searchCount = 0;
             let filterCount = 0;
@@ -134,7 +135,7 @@ async function fetchLogDetail(logId, date, isRetry = 0) {
     }
 }
 
-async function fetchListWithLimit(searchKeyWord, limit, offset, startLong, endLong) {
+async function fetchListWithLimit(searchKeyWord, limit, offset, startLong, endLong, maxRequestCount) {
     const intervals = [];
     const intervalInSeconds = 60
     let current = startLong;
@@ -153,7 +154,7 @@ async function fetchListWithLimit(searchKeyWord, limit, offset, startLong, endLo
 
         executing.push(promise);
 
-        if (executing.length >= limit) {
+        if (executing.length >= maxRequestCount) {
             await Promise.race(executing);
         }
     }
@@ -163,7 +164,7 @@ async function fetchListWithLimit(searchKeyWord, limit, offset, startLong, endLo
     });
 }
 
-async function fetchDetailWithLimit(idList, limit) {
+async function fetchDetailWithLimit(idList, maxRequestCount) {
     const executing = [];
 
     for (const { id, time } of idList) {
@@ -172,7 +173,7 @@ async function fetchDetailWithLimit(idList, limit) {
 
         executing.push(promise);
 
-        if (executing.length >= limit) {
+        if (executing.length >= maxRequestCount) {
             await Promise.race(executing);
         }
     }
