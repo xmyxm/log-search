@@ -5,17 +5,34 @@ const printLog = require('./util/printLog')
 const cookie = ``
 const usertext = 'oZP24uBpLXJtkQQMqLQglgYJRU7M'
 const searchKeyWord = 'httpcode:418'
-const startLong = new Date('2024-11-16 16:06:00').getTime()
+const startLong = new Date('2024-11-16 16:05:00').getTime()
 const endLong = new Date('2024-11-16 16:06:00').getTime()
 
-const searchLogIdList = []
-const searchResultList = []
 let offset = 0;
 const limit = 100;
 const host = ['h', 't', 't', 'p', 's', ':', '/', '/', 'r', 'a', 'p', 't', 'o', 'r', '.', 'm', 'w', 's', '.', 's', 'a', 'n', 'k', 'u', 'a', 'i', '.', 'c', 'o', 'm'].join('')
 
 Promise.resolve().then(() => {
-    fetchLogList(searchKeyWord, limit, offset, startLong, endLong)
+    fetchListWithLimit(searchKeyWord, limit, offset, startLong, endLong).then((idList) => {
+        fetchDetailWithLimit(idList, 3).then(detailList => {
+            printLog.info(`${getTime()}: 查询完所有日志详情 ================>`)
+            let searchCount = 0;
+            let filterCount = 0;
+            detailList.forEach((item, index) => {
+                if (item) {
+                    searchCount += 1
+                    if (item.filterData) {
+                        filterCount += 1
+                        printLog.info(`${index} =====> ${JSON.stringify(item.filterData)}`)
+                    }
+                }
+            })
+            const time = `${getTime(startLong)} : 共查询出：`
+            printLog.info(`${time}${idList.length} 条数据记录`)
+            printLog.info(`${time}${searchCount} 条数据明细`)
+            printLog.warn(`${time}${filterCount} 条匹配数据`)
+        })
+    })
 })
 
 // 自定义请求头
@@ -41,14 +58,16 @@ const customHeaders = {
     'x-requested-with': 'XMLHttpRequest, XMLHttpRequest',
 };
 
-async function fetchLogList(searchKeyWord, limit, offset, startLong, endLong) {
+async function fetchLogList(searchKeyWord, limit, offset, startLong, endLong, searchLogIdList = []) {
     const currentPageIndex = offset / limit + 1
     const errorCategory = encodeURIComponent(searchKeyWord)
     const queryParam = encodeURIComponent(`{"SEC_CATEGORY":["${searchKeyWord}"]}`)
     const baseParam = 'projectId=2621&webVersion=all&pageId=-1&metric=TP90&speedPoint=11&speedPoint=16&speedPoint=18&speedPoint=25&statusCodeId=-1&connectTypeId=-1&mpVerId=-1&mpLibVerId=-1&isPerfInMp=false&perfBundleId=3763'
     const url = `${host}/cat/fe/mplog/detailTable?${baseParam}&errorCategory=${errorCategory}&pageSize=${limit}&sortField=DATE&sortOrder=DESC&limit=${limit}&offset=${offset}&unionId=&pvId=&queryParam=${queryParam}&timeSize=MINUTE&startLong=${startLong}&endLong=${endLong}`
+    const searchTimetext = `${getTime(startLong)} - ${getTime(endLong)}`
 
     try {
+        let isContinue = false
         let hasRequestSUS = false, hasData = false
         const response = await axios.get(url, { headers: customHeaders });
         if (response.data && response.data.code === 10000) {
@@ -63,86 +82,100 @@ async function fetchLogList(searchKeyWord, limit, offset, startLong, endLong) {
                 })
             }
             if (offset === 0) {
-                printLog.info(`${getTime()}: 当前查询条件总共有：${result.total}条数据`)
+                printLog.info(`${searchTimetext}: 当前查询条件总共有：${result.total}条数据`)
             }
             if (result.table.rows.length === limit) {
-                fetchLogList(searchKeyWord, limit, offset += limit, startLong, endLong)
-            } else {
-                fetchWithLimit(searchLogIdList, 3).then(results => {
-                    printLog.info(`${getTime()}: 查询完所有日志详情 ================>`)
-                    searchResultList.forEach((item, index) => {
-                        printLog.info(`${index}: ${JSON.stringify(item)}`)
-                    })
-                    const detailList = results.filter(i => i)
-                    printLog.info(`${getTime()}: 共查询出：${searchLogIdList.length} 条数据记录`)
-                    printLog.info(`${getTime()}: 共查询出：${detailList.length} 条数据明细`)
-                    printLog.warn(`${getTime()}: 共查询出：${searchResultList.length} 条匹配数据`)
-                })
+                isContinue = true
             }
         }
-        const message = `${getTime()}: 发送第${currentPageIndex}页查询请求响应${hasRequestSUS ? '成功' : '失败'}, ${hasRequestSUS ? hasData ? `查询到${response.data.result.table.rows.length}条数据` : '但是没有数据' : ''}`
+        const message = `${searchTimetext}: 发送第${currentPageIndex}页查询请求响应${hasRequestSUS ? '成功' : '失败'}, ${hasRequestSUS ? hasData ? `查询到${response.data.result.table.rows.length}条数据` : '但是没有数据' : ''}`
         if (hasRequestSUS) {
             printLog.info(message)
         } else {
-            printLog.error(`${getTime()}: ${message}, 状态码：${response.data.code}, 失败原因：${response.data.message}`)
+            printLog.error(`${searchTimetext}: ${message}, 状态码：${response.data.code}, 失败原因：${response.data.message}`)
         }
+
+        if (isContinue) {
+            await fetchLogList(searchKeyWord, limit, offset += limit, startLong, endLong, searchLogIdList)
+        }
+
+        return searchLogIdList
     } catch (error) {
         console.error(`Failed to fetch ${url}:`, error.message);
     }
 }
 
-async function fetchLogDetail(logId, date, isRetry = false) {
+async function fetchLogDetail(logId, date, isRetry = 0) {
     const url = `${host}/cat/fe/mplog/singleContent?logId=${logId}&date=${date}`
     try {
-        let hasRequestSUS = false;
         const response = await axios.get(url, { headers: customHeaders });
         if (response.data && response.data.code === 10000) {
-            hasRequestSUS = true
             const { result: { otherInfo: { customInfo, other: { eventTs } }, pageUrl, stackInfo } } = response.data
+            const result = { data: null, filterData: null }
             if (stackInfo.indexOf(usertext) > -1) {
                 const contentJson = JSON.parse(stackInfo)
-                const logDetailInfo = Object.assign({
+                result.filterData = Object.assign({
                     pageUrl,
                     time: getTime(eventTs),
                     contentJson
                 }, JSON.parse(customInfo))
-                searchResultList.push(logDetailInfo)
             }
-            printLog.info(`${getTime()}: ${isRetry ? '重试' : ''}查询 ${logId} 详情成功`)
-            return response.data
+            printLog.info(`${getTime()}: ${isRetry ? `重试第 ${isRetry + 1} 次` : ''}查询 ${logId} 详情成功`)
+            result.data = response.data
+            return result
+        } else if (isRetry < 3) {
+            // 重试
+            return await fetchLogDetail(logId, date, isRetry += 1)
         } else {
-            if (isRetry === false) {
-                // 仅重试一次
-                return await fetchLogDetail(logId, date, true)
-            } else {
-                printLog.error(`${getTime()}: 重试查询 ${logId} 详情时仍然失败, 状态码：${response.data.code}, 失败原因：${response.data.message}`)
-            }
+            printLog.error(`${getTime()}: 重试查询 ${isRetry + 1} 次 ${logId} 详情时仍然失败, 状态码：${response.data.code}, 失败原因：${response.data.message}`)
         }
     } catch (error) {
         console.error(`Failed to fetch ${url}:`, error.message);
     }
 }
 
-async function fetchWithLimit(idList, limit) {
-    const results = []; // 存储所有请求的结果
-    const executing = []; // 存储当前正在执行的请求
+async function fetchListWithLimit(searchKeyWord, limit, offset, startLong, endLong) {
+    const intervals = [];
+    const intervalInSeconds = 60
+    let current = startLong;
 
-    for (const { id, time } of idList) {
-        // 定义请求任务
-        const promise = fetchLogDetail(id, new Date(time).getTime())
-        results.push(promise);
+    while (current <= endLong) {
+        const next = current + intervalInSeconds * 1000
+        intervals.push({ start: current, end: current });
+        current = next;
+    }
 
-        // 将请求任务添加到当前正在执行的请求中
+    const executing = [];
+
+    for (const { start, end } of intervals) {
+
+        const promise = fetchLogList(searchKeyWord, limit, offset, start, end)
+
         executing.push(promise);
 
-        // 如果当前正在执行的请求数量达到限制，则等待其中一个完成
         if (executing.length >= limit) {
             await Promise.race(executing);
-            // 移除已完成的请求
-            executing.splice(executing.indexOf(await Promise.race(executing)), 1);
         }
     }
 
-    // 等待所有请求完成
-    return Promise.all(results);
+    return Promise.all(executing).then((List) => {
+        return [].concat.apply([], List)
+    });
+}
+
+async function fetchDetailWithLimit(idList, limit) {
+    const executing = [];
+
+    for (const { id, time } of idList) {
+
+        const promise = fetchLogDetail(id, new Date(time).getTime())
+
+        executing.push(promise);
+
+        if (executing.length >= limit) {
+            await Promise.race(executing);
+        }
+    }
+
+    return Promise.all(executing);
 }
