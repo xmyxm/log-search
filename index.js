@@ -3,10 +3,10 @@ const getTime = require('./util/getTime')
 const printLog = require('./util/printLog')
 
 const cookie = ``
-const usertext = 'oZP24uBpLXJtkQQMqLQglgYJRU7M'
-const searchKeyWord = 'httpcode:418'
-const startLong = new Date('2024-11-16 16:05:00').getTime()
-const endLong = new Date('2024-11-16 16:06:00').getTime()
+const usertext = '2907334936'
+const searchKeyWord = 'httpcode:403'
+const startLong = new Date('2024-11-22 16:42:00').getTime()
+const endLong = new Date('2024-11-22 16:42:00').getTime()
 
 let offset = 0;
 const limit = 100;
@@ -114,12 +114,13 @@ async function fetchLogDetail(logId, date, isRetry = 0) {
             const { result: { otherInfo: { customInfo, other: { eventTs } }, pageUrl, stackInfo } } = response.data
             const result = { data: null, filterData: null }
             if (stackInfo.indexOf(usertext) > -1) {
+                const versionInfo = JSON.parse(customInfo)
                 const contentJson = JSON.parse(stackInfo)
                 result.filterData = Object.assign({
                     pageUrl,
                     time: getTime(eventTs),
                     contentJson
-                }, JSON.parse(customInfo))
+                }, versionInfo)
             }
             printLog.info(`${getTime()}: ${isRetry ? `重试第 ${isRetry + 1} 次` : ''}查询 ${logId} 详情成功`)
             result.data = response.data
