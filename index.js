@@ -3,10 +3,10 @@ const getTime = require('./util/getTime')
 const printLog = require('./util/printLog')
 
 const cookie = ``
-const usertext = '2907334936'
+const usertextList = ['oZP24uIINlUwpRfl-20yEh81JT_w', '94918248', 'EpUBqP4-FjyzaGRSHADdqsHzaQ-qsoD6cydddiXJYjg']
 const searchKeyWord = 'httpcode:403'
-const startLong = new Date('2024-11-22 16:42:00').getTime()
-const endLong = new Date('2024-11-22 16:42:00').getTime()
+const startLong = new Date('2024-12-05 11:28:00').getTime()
+const endLong = new Date('2024-12-05 11:28:00').getTime()
 
 let offset = 0;
 const limit = 100;
@@ -113,7 +113,7 @@ async function fetchLogDetail(logId, date, isRetry = 0) {
         if (response.data && response.data.code === 10000) {
             const { result: { otherInfo: { customInfo, other: { eventTs } }, pageUrl, stackInfo } } = response.data
             const result = { data: null, filterData: null }
-            if (stackInfo.indexOf(usertext) > -1) {
+            if (usertextList.find(key => stackInfo.indexOf(key) > -1)) {
                 const versionInfo = JSON.parse(customInfo)
                 const contentJson = JSON.parse(stackInfo)
                 result.filterData = Object.assign({
