@@ -97,8 +97,13 @@ function getDateList() {
     return dateList;
 }
 
-getDateList().forEach(date => {
-    fetchLogDetail(reportId, date).then(result => {
-        console.log(result);
-    });
-});
+Promise.all(    
+    getDateList().map(date => fetchLogDetail(reportId, date).then(results => {
+        return {
+            date,
+            result: JSON.stringify(results)
+        }
+    }))
+).then(results => {    
+    console.log(results.sort((a, b) => a.date.localeCompare(b.date)));
+})
