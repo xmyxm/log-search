@@ -41,25 +41,25 @@ async function fetchLogDetail(reportId = 829, date, isRetry = 0) {
             const metricsNameList = ['tp90', 'tp50']
             const result = {
                 tp90: {
-                    totalData: 0,
-                    data1: 0,
-                    data2: 0,
-                    data3: 0
+                    total: 0,
+                    t1: 0,
+                    t2: 0,
+                    t3: 0
                 },
                 tp50: {
-                    totalData: 0,
-                    data1: 0,
-                    data2: 0,
-                    data3: 0
+                    total: 0,
+                    t1: 0,
+                    t2: 0,
+                    t3: 0
                 }
             }
             metricsTableVoList.forEach((item, index) => {
                 if (index < 2) {
                     const [totalData, data1, data2, data3] = item.metricsValues
-                    result[metricsNameList[index]].totalData = parseFloat((totalData[0].value / 1000).toFixed(3))
-                    result[metricsNameList[index]].data1 = parseFloat((data1[0].value / 1000).toFixed(3))
-                    result[metricsNameList[index]].data2 = parseFloat((data2[0].value / 1000).toFixed(3))
-                    result[metricsNameList[index]].data3 = parseFloat((data3[0].value / 1000).toFixed(3))
+                    result[metricsNameList[index]].total = parseFloat((totalData[0].value / 1000).toFixed(3))
+                    result[metricsNameList[index]].t1 = parseFloat((data1[0].value / 1000).toFixed(3))
+                    result[metricsNameList[index]].t2 = parseFloat((data2[0].value / 1000).toFixed(3))
+                    result[metricsNameList[index]].t3 = parseFloat((data3[0].value / 1000).toFixed(3))
                 }
             })
             printLog.info(`${getTime()}: ${isRetry ? `重试第 ${isRetry + 1} 次` : ''}查询 ${reportId} 详情成功`)
@@ -77,11 +77,11 @@ async function fetchLogDetail(reportId = 829, date, isRetry = 0) {
 
 function getDateList() {
     // 获取当前日期
-    const today = new Date();
+    const today = new Date('2025-12-10');
     const currentYear = today.getFullYear();
 
     // 设置起始日期为今年10月1日（月份从0开始，9月是8）
-    const startDate = new Date(currentYear, 11, 1); // 9月1日
+    const startDate = new Date(currentYear, 8, 15); // 9月15日
 
     const dateList = [];
     // 循环打印从9月1日到今天的日期
@@ -101,9 +101,12 @@ Promise.all(
     getDateList().map(date => fetchLogDetail(reportId, date).then(results => {
         return {
             date,
-            result: JSON.stringify(results)
+            res: results
         }
     }))
-).then(results => {    
-    console.log(results.sort((a, b) => a.date.localeCompare(b.date)));
+).then(results => {
+    results.sort((a, b) => a.date.localeCompare(b.date)).forEach(item => {
+        const { tp90, tp50 } = item.res
+        printLog.info(`[${item.date}] tp90 => total:${tp90.total}, t1:${tp90.t1}, t2:${tp90.t2}, t3:${tp90.t3}|tp50 => total:${tp50.total}, t1:${tp50.t1}, t2:${tp50.t2}, t3:${tp50.t3}`);
+    });
 })
